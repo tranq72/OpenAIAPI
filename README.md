@@ -3,11 +3,17 @@
 #### A light wrapper around [**OpenAI**](https://openai.com/api/) API, written in Swift.
 The full OpenAI platform docs are here: https://platform.openai.com/docs/
 
+### What's Implemented
+- [Completions](https://platform.openai.com/docs/api-reference/completions)
+- [Edits](https://platform.openai.com/docs/api-reference/edits)
+- ...
+
+
 ## Installation
 ### Swift Package Manager
 
-1. Select `File`/`Add Packages` from xcode menu.
-1. Paste `https://github.com/tranq72/OpenAIAPI.git`.
+1. Select `File`/`Add Packages` from xcode menu
+1. Paste `https://github.com/tranq72/OpenAIAPI.git`
 
 To update, select `Packages`/`Update to Latest Package Versions`
 
@@ -52,5 +58,11 @@ For the supported models see [OpenAIAPIModel.swift](https://github.com/tranq72/O
 
 ### API secret
 
-Keep your API secrets secure and away from client apps.
+Keep your API secret secure and away from client apps.
 Instead of directly calling a third party API (like OpenAI, which is a paid service) you better deploy a reverse-proxy in your backend and set the `endpoint` and `secret` parameters accordingly.
+
+## Contributing
+This is just an initial draft implementation for a side project. Feel free to raise a pull request if you spot a bug or would like to contribute.
+
+## License
+MIT
