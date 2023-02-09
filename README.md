@@ -6,6 +6,8 @@ The full OpenAI platform docs are here: https://platform.openai.com/docs/
 ### What's Implemented
 - [Completions](https://platform.openai.com/docs/api-reference/completions)
 - [Edits](https://platform.openai.com/docs/api-reference/edits)
+- [List models](https://platform.openai.com/docs/api-reference/models/list)
+- [Retrieve model](https://platform.openai.com/docs/api-reference/models/retrieve)
 - ...
 
 
