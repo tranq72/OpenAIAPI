@@ -21,19 +21,31 @@ extension OpenAIAPI {
         var parms = config
         parms.prompt = prompt
         
-        // any Error
         postAPIRequest("/v1/completions", configParms: parms) { (result:(Result<OpenAIAPICompletionResponse, WebServiceError>) ) in
             completion(result)
         }
     }
     
     public func createEdit(instruction: String, input: String, config: OpenAIAPIEditParms, completion: @escaping (Result<OpenAIAPIEditResponse, WebServiceError>) -> Void) {
-
         var parms = config
         parms.instruction = instruction
         parms.input = input
 
         postAPIRequest("/v1/edits", configParms: parms) { (result:(Result<OpenAIAPIEditResponse, WebServiceError>) ) in
+            completion(result)
+        }
+    }
+    
+    public func listModels(completion: @escaping (Result<OpenAIAPIModelsResponse, WebServiceError>) -> Void) {
+        struct NilParms: Codable {}
+        getAPIRequest("/v1/models", configParms: NilParms()) { (result:(Result<OpenAIAPIModelsResponse, WebServiceError>) ) in
+            completion(result)
+        }
+    }
+    
+    public func retrieveModel(_ model: String, completion: @escaping (Result<OpenAIAPIModelResponse, WebServiceError>) -> Void) {
+        struct NilParms: Codable { }
+        getAPIRequest("/v1/models/\(model)", configParms: NilParms()) { (result:(Result<OpenAIAPIModelResponse, WebServiceError>) ) in
             completion(result)
         }
     }

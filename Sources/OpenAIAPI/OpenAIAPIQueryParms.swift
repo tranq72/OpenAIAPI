@@ -1,17 +1,11 @@
 //
-//  CompletionParms.swift
+//  OpenAIAPIQueryParms.swift
 //
 //  Created by Nico Tranquilli on 05/02/23.
 //
 
 import Foundation
 
-/*
-public enum OpenAIAPIQueryConfigs {
-    case completion(OpenAIAPICompletionConfig)
-    case edit(OpenAIAPIEditConfig)
-}
-*/
 public struct OpenAIAPICompletionParms : Codable {
     var model: String = OpenAIAPIModel.text_davinci_003.name
     var prompt: String = "<|endoftext|>"

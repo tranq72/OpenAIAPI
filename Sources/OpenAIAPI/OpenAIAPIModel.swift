@@ -1,5 +1,5 @@
 //
-//  OpenAIModel.swift
+//  OpenAIAPIModel.swift
 //
 //  Created by Nico Tranquilli on 05/02/23.
 //

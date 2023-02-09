@@ -1,4 +1,5 @@
 //
+//  OpenAIAPI
 //  WebService.swift
 //
 //  Created by Nico Tranquilli on 05/02/23.
@@ -58,7 +59,7 @@ public class WebService : NSObject {
         urlComps?.path = path + requestPath
         if let url = urlComps?.url {
             var request = URLRequest(url: url)
-            request.httpMethod="POST"
+            request.httpMethod = method
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
             request.addValue("application/json", forHTTPHeaderField: "Accept")
             request.addValue("gzip", forHTTPHeaderField: "Accept-Encoding")
@@ -69,14 +70,60 @@ public class WebService : NSObject {
         }
         return nil
     }
-    internal func postAPIRequest<QueryType: Codable, ResponseType: Codable>(_ requestPath:String, configParms: QueryType, completion: @escaping (Result<ResponseType, WebServiceError>) -> Void) {
-        
+    internal func postAPIRequest<QueryParms: Codable, ResponseType: Codable>(_ requestPath:String, configParms: QueryParms, completion: @escaping (Result<ResponseType, WebServiceError>) -> Void) {
         var request = createUrlRequest(requestPath, method: "POST")
         guard request != nil else {
             return completion(.failure(WebServiceError.badUrl))
         }
         request!.httpBody = try? JSONEncoder().encode(configParms)
         
+        let task = session.dataTask(with: request!) { (data, response, error) in
+            guard error == nil else {
+                // .mapError(...)
+                let result: Result<ResponseType, WebServiceError> = .failure(WebServiceError(error!))
+                return completion(result)
+            }
+            guard data != nil else {
+                return completion(.failure(WebServiceError.noData))
+            }
+            guard response != nil else {
+                return completion(.failure(WebServiceError.noResponse))
+            }
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return completion(.failure(WebServiceError.badResponse))
+            }
+            let statusCode = httpResponse.statusCode
+            guard statusCode == 200 else {
+                return completion(.failure(WebServiceError.status(code: statusCode)))
+            }
+            do {
+                #if DEBUG
+                let str = String(decoding: data!, as: UTF8.self)
+                print("data as string: \(str)")
+                #endif
+                
+                let response = try JSONDecoder().decode(ResponseType.self, from: data!)
+                completion(.success(response))
+            } catch {
+                let result: Result<ResponseType, WebServiceError> = .failure(WebServiceError(error))
+                return completion(result)
+            }
+        }
+        task.resume()
+    }
+    internal func getAPIRequest<QueryParms: Codable, ResponseType: Codable>(_ requestPath:String, configParms: QueryParms, completion: @escaping (Result<ResponseType, WebServiceError>) -> Void) {
+        var request = createUrlRequest(requestPath, method: "GET")
+        guard request != nil else {
+            return completion(.failure(WebServiceError.badUrl))
+        }
+        if var components = URLComponents(url: request!.url!, resolvingAgainstBaseURL: false) {
+            if let jsonData = try? JSONEncoder().encode(configParms), let jsonDict = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                components.queryItems = jsonDict.map {
+                    URLQueryItem(name: $0, value: "\($1)")
+                }
+                request!.url = components.url
+            }
+        }
         let task = session.dataTask(with: request!) { (data, response, error) in
             guard error == nil else {
                 // .mapError(...)

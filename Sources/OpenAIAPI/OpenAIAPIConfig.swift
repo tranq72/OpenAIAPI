@@ -1,5 +1,5 @@
 //
-//  OpenAIConfiguration.swift
+//  OpenAIAPIConfig.swift
 //
 //  Created by Nico Tranquilli on 05/02/23.
 //
@@ -8,7 +8,7 @@ import Foundation
 
 public struct OpenAIAPIConfig {
     fileprivate(set) var secret: String?
-    var baseURL: URL
+    let baseURL: URL
     
     /// ideally, credentials should NOT be exposed in your code, hardcoded or not it doesn't matter
     /// set <endpoint> to your backend/reverse-proxy and don't use your real OpenAI API secret in your client app
