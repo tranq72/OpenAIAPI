@@ -32,9 +32,12 @@ public struct OpenAIAPIEditChoice: Codable {
     //public let logprobs: ..
 }
 public struct OpenAIAPIUsage: Codable {
-    let prompt_tokens: Int
-    let completion_tokens: Int
-    let total_tokens: Int
+    public let prompt_tokens: Int
+    public let completion_tokens: Int
+    public let total_tokens: Int
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.total_tokens < rhs.total_tokens
+    }
 }
 
 public struct OpenAIAPIModelsResponse: Codable {

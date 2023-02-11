@@ -42,15 +42,16 @@ public enum WebServiceError: Error {
     }
 }
 
-
 public class WebService : NSObject {
     private let session = URLSession.shared
-    let baseURL: URL
-    let secret: String?
+    private let baseURL: URL
+    private let secret: String?
+    private let organization: String?
     
-    init (baseURL:URL, secret: String?) {
+    init (baseURL:URL, secret: String?, organization: String?=nil) {
         self.baseURL = baseURL
         self.secret = secret
+        self.organization = organization
         super.init()
     }
     private func createUrlRequest(_ requestPath:String, method: String) -> URLRequest? {
@@ -66,6 +67,9 @@ public class WebService : NSObject {
             if let secret = self.secret {
                 request.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization")
             }
+            if let organization = self.organization {
+                request.setValue("\(organization)", forHTTPHeaderField: "OpenAI-Organization")
+            }
             return request
         }
         return nil
@@ -75,41 +79,46 @@ public class WebService : NSObject {
         guard request != nil else {
             return completion(.failure(WebServiceError.badUrl))
         }
-        request!.httpBody = try? JSONEncoder().encode(configParms)
-        
-        let task = session.dataTask(with: request!) { (data, response, error) in
-            guard error == nil else {
-                // .mapError(...)
-                let result: Result<ResponseType, WebServiceError> = .failure(WebServiceError(error!))
-                return completion(result)
+        do {
+            request!.httpBody = try JSONEncoder().encode(configParms)
+            
+            let task = session.dataTask(with: request!) { (data, response, error) in
+                guard error == nil else {
+                    // .mapError(...)
+                    let result: Result<ResponseType, WebServiceError> = .failure(WebServiceError(error!))
+                    return completion(result)
+                }
+                guard data != nil else {
+                    return completion(.failure(WebServiceError.noData))
+                }
+                guard response != nil else {
+                    return completion(.failure(WebServiceError.noResponse))
+                }
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    return completion(.failure(WebServiceError.badResponse))
+                }
+                let statusCode = httpResponse.statusCode
+                guard statusCode == 200 else {
+                    return completion(.failure(WebServiceError.status(code: statusCode)))
+                }
+                do {
+                    /*#if DEBUG
+                    let str = String(decoding: data!, as: UTF8.self)
+                    print("data as string: \(str)")
+                    #endif*/
+                    
+                    let response = try JSONDecoder().decode(ResponseType.self, from: data!)
+                    completion(.success(response))
+                } catch {
+                    let result: Result<ResponseType, WebServiceError> = .failure(WebServiceError(error))
+                    return completion(result)
+                }
             }
-            guard data != nil else {
-                return completion(.failure(WebServiceError.noData))
-            }
-            guard response != nil else {
-                return completion(.failure(WebServiceError.noResponse))
-            }
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return completion(.failure(WebServiceError.badResponse))
-            }
-            let statusCode = httpResponse.statusCode
-            guard statusCode == 200 else {
-                return completion(.failure(WebServiceError.status(code: statusCode)))
-            }
-            do {
-                #if DEBUG
-                let str = String(decoding: data!, as: UTF8.self)
-                print("data as string: \(str)")
-                #endif
-                
-                let response = try JSONDecoder().decode(ResponseType.self, from: data!)
-                completion(.success(response))
-            } catch {
-                let result: Result<ResponseType, WebServiceError> = .failure(WebServiceError(error))
-                return completion(result)
-            }
+            task.resume()
+        } catch {
+            let result: Result<ResponseType, WebServiceError> = .failure(WebServiceError(error))
+            return completion(result)
         }
-        task.resume()
     }
     internal func getAPIRequest<QueryParms: Codable, ResponseType: Codable>(_ requestPath:String, configParms: QueryParms, completion: @escaping (Result<ResponseType, WebServiceError>) -> Void) {
         var request = createUrlRequest(requestPath, method: "GET")
@@ -117,11 +126,17 @@ public class WebService : NSObject {
             return completion(.failure(WebServiceError.badUrl))
         }
         if var components = URLComponents(url: request!.url!, resolvingAgainstBaseURL: false) {
-            if let jsonData = try? JSONEncoder().encode(configParms), let jsonDict = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-                components.queryItems = jsonDict.map {
-                    URLQueryItem(name: $0, value: "\($1)")
+            do {
+                let jsonData = try JSONEncoder().encode(configParms)
+                if let jsonDict = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                    components.queryItems = jsonDict.map {
+                        URLQueryItem(name: $0, value: "\($1)")
+                    }
+                    request!.url = components.url
                 }
-                request!.url = components.url
+            } catch {
+                let result: Result<ResponseType, WebServiceError> = .failure(WebServiceError(error))
+                return completion(result)
             }
         }
         let task = session.dataTask(with: request!) { (data, response, error) in
@@ -144,10 +159,10 @@ public class WebService : NSObject {
                 return completion(.failure(WebServiceError.status(code: statusCode)))
             }
             do {
-                #if DEBUG
+                /*#if DEBUG
                 let str = String(decoding: data!, as: UTF8.self)
                 print("data as string: \(str)")
-                #endif
+                #endif*/
                 
                 let response = try JSONDecoder().decode(ResponseType.self, from: data!)
                 completion(.success(response))

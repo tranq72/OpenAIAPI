@@ -1,21 +1,23 @@
 # OpenAIAPI
 
 #### A light wrapper around [**OpenAI**](https://openai.com/api/) API, written in Swift.
-The full OpenAI platform docs are here: https://platform.openai.com/docs/
+
+The full OpenAI platform docs are here: <https://platform.openai.com/docs/>
 
 ### What's Implemented
-- [Completions](https://platform.openai.com/docs/api-reference/completions)
-- [Edits](https://platform.openai.com/docs/api-reference/edits)
-- [List models](https://platform.openai.com/docs/api-reference/models/list)
-- [Retrieve model](https://platform.openai.com/docs/api-reference/models/retrieve)
-- ...
 
+-   [Completions](#completions)
+-   [Edits](#edits)
+-   [List models](#list-models)
+-   [Retrieve model](#retrieve-model)
+-   ...
 
 ## Installation
+
 ### Swift Package Manager
 
-1. Select `File`/`Add Packages` from xcode menu
-1. Paste `https://github.com/tranq72/OpenAIAPI.git`
+1.  Select `File`/`Add Packages` from xcode menu
+2.  Paste `https://github.com/tranq72/OpenAIAPI.git`
 
 To update, select `Packages`/`Update to Latest Package Versions`
 
@@ -26,29 +28,64 @@ import OpenAIAPI
 let openAI = OpenAIAPI(OpenAIAPIConfig(secret: "..."))
 ```
 
-```
-let config = OpenAIAPIEditParms(n: 2)
-openAI.createEdit(instruction:"Fix spelling and grammar", input:"The pens is an the taible", config: config) { result in
-    switch result {
-       case .success(let success):
-          dump(success)
-       case .failure(let failure):
-          print("\(failure.localizedDescription)")
-    }
-}
-```
+##### [Completions](https://platform.openai.com/docs/api-reference/completions)
 
-```
-let queryParms = OpenAIAPICompletionParms(max_tokens: 500, temperature:0.9)
-openAI.createCompletion(prompt: "Write a poem in the style of Dante about Steve Jobs", config: queryParms) { result in
-    switch result {
-       case .success(let success):
-          dump(success)
-       case .failure(let failure):
-          print("\(failure.localizedDescription)")
+    let config = OpenAIAPICompletionParms(max_tokens: 500, temperature:0.9)
+
+    openAI.createCompletion(prompt: "Write a poem in the style of Dante about Steve Jobs", config: config) { (result:Result<OpenAIAPICompletionResponse, WebServiceError>) in
+        switch result {
+           case .success(let success):
+              dump(success)
+           case .failure(let failure):
+              print("\(failure.localizedDescription)")
+        }
     }
-}
-```
+
+:bulb: OpenAIAPI supports Swift concurrency, ie:
+
+    Task {
+          do {
+              let result = try await openAI.retrieveModel("text-davinci-003")
+              dump(result)
+          } catch {
+              print(error.localizedDescription)
+          }
+    }
+
+##### [Edits](https://platform.openai.com/docs/api-reference/edits)
+
+    let config = OpenAIAPIEditParms(n: 2)
+
+    openAI.createEdit(instruction:"Fix spelling and grammar", input:"The pens is an the taible", config: config) { (result:Result<OpenAIAPIEditResponse, WebServiceError>) in
+        switch result {
+           case .success(let success):
+              dump(success)
+           case .failure(let failure):
+              print("\(failure.localizedDescription)")
+        }
+    }
+
+##### [List models](https://platform.openai.com/docs/api-reference/models/list)
+
+    openAI.listModels { (result:Result<OpenAIAPIModelsResponse, WebServiceError>)  in
+      switch result {
+         case .success(let success):
+            dump(success)
+         case .failure(let failure):
+            print("\(failure.localizedDescription)")
+      }
+    }
+
+##### [Retrieve model](https://platform.openai.com/docs/api-reference/models/retrieve)
+
+    openAI.retrieveModel("text-davinci-003") { (result:Result<OpenAIAPIModelResponse, WebServiceError>) in
+                switch result {
+                case .success(let success):
+                    dump(success)
+                case .failure(let failure):
+                    dLog("FAILED: \(failure.localizedDescription)")
+                }
+            }
 
 ### Query parameters
 
@@ -64,7 +101,9 @@ Keep your API secret secure and away from client apps.
 Instead of directly calling a third party API (like OpenAI, which is a paid service) you better deploy a reverse-proxy in your backend and set the `endpoint` and `secret` parameters accordingly.
 
 ## Contributing
+
 This is just an initial draft implementation for a side project. Feel free to raise a pull request if you spot a bug or would like to contribute.
 
 ## License
+
 MIT
