@@ -83,6 +83,7 @@ extension OpenAIAPI {
 }
 
 // swift concurrency support
+@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
 extension OpenAIAPI {
     public func createCompletion(prompt: String, config: OpenAIAPICompletionParms) async throws -> OpenAIAPICompletionResponse {
         return try await withCheckedThrowingContinuation { continuation in
