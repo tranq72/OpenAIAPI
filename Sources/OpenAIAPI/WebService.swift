@@ -13,6 +13,7 @@ public enum WebServiceError: Error {
     case badResponse
     case noResponse
     case status(code: Int)
+    case apiError(msg: String)
     case unknownError(error: Error)
     //case parsing
 
@@ -32,6 +33,7 @@ public enum WebServiceError: Error {
         case .badResponse: return "bad response from server"
         case .noResponse: return "no response from server";
         case .status(let code): return "unexepected \(code) response from server";
+        case .apiError(let msg): return msg
         case .unknownError(let error): return "unknown error: \(error.localizedDescription)"
         //case .parsing: return "parsing issues";
         }
@@ -54,14 +56,18 @@ public class WebService : NSObject {
         self.organization = organization
         super.init()
     }
-    private func createUrlRequest(_ requestPath:String, method: String) -> URLRequest? {
+    private func createUrlRequest(_ requestPath:String, method: String, jsonRequest: Bool=true) -> URLRequest? {
         var urlComps = URLComponents(url: baseURL, resolvingAgainstBaseURL: true)
         let path = urlComps?.path ?? ""
         urlComps?.path = path + requestPath
         if let url = urlComps?.url {
             var request = URLRequest(url: url)
             request.httpMethod = method
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            if jsonRequest { // json
+                request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            } else { // multipart/form-data
+                request.addValue("multipart/form-data", forHTTPHeaderField: "Content-Type")
+            }
             request.addValue("application/json", forHTTPHeaderField: "Accept")
             request.addValue("gzip", forHTTPHeaderField: "Accept-Encoding")
             if let secret = self.secret {
@@ -74,6 +80,7 @@ public class WebService : NSObject {
         }
         return nil
     }
+    
     internal func postAPIRequest<QueryParms: Codable, ResponseType: Codable>(_ requestPath:String, configParms: QueryParms, completion: @escaping (Result<ResponseType, WebServiceError>) -> Void) {
         var request = createUrlRequest(requestPath, method: "POST")
         guard request != nil else {
@@ -81,7 +88,9 @@ public class WebService : NSObject {
         }
         do {
             request!.httpBody = try JSONEncoder().encode(configParms)
-            
+            #if DEBUG
+            print(String(data: request!.httpBody!, encoding: .utf8)!)
+            #endif
             let task = session.dataTask(with: request!) { (data, response, error) in
                 guard error == nil else {
                     // .mapError(...)
@@ -91,6 +100,7 @@ public class WebService : NSObject {
                 guard data != nil else {
                     return completion(.failure(WebServiceError.noData))
                 }
+                
                 guard response != nil else {
                     return completion(.failure(WebServiceError.noResponse))
                 }
@@ -99,7 +109,27 @@ public class WebService : NSObject {
                 }
                 let statusCode = httpResponse.statusCode
                 guard statusCode == 200 else {
-                    return completion(.failure(WebServiceError.status(code: statusCode)))
+                    //return completion(.failure(WebServiceError.status(code: statusCode)))
+
+                    /*
+                     error example
+                     "error": {
+                         "message": "Incorrect API key provided: secret. You can find your API key at https://platform.openai.com/account/api-keys.",
+                         "type": "invalid_request_error",
+                         "param": null,
+                         "code": "invalid_api_key"
+                     }
+                     */
+                    do {
+                        let errorResponse = try JSONDecoder().decode(OpenAIAPIErrorResponse.self, from: data!)
+                        return completion(.failure(WebServiceError.apiError(msg:errorResponse.error.message)))
+                    } catch {
+                        #if DEBUG
+                        print(String(data: data!, encoding: .utf8)!)
+                        print("error = \(error.localizedDescription)")
+                        #endif
+                        return completion(.failure(WebServiceError.status(code: statusCode)))
+                    }
                 }
                 do {
                     /*#if DEBUG
@@ -156,7 +186,16 @@ public class WebService : NSObject {
             }
             let statusCode = httpResponse.statusCode
             guard statusCode == 200 else {
-                return completion(.failure(WebServiceError.status(code: statusCode)))
+                do {
+                    let errorResponse = try JSONDecoder().decode(OpenAIAPIErrorResponse.self, from: data!)
+                    return completion(.failure(WebServiceError.apiError(msg:errorResponse.error.message)))
+                } catch {
+                    /*#if DEBUG
+                    print(String(data: data!, encoding: .utf8)!)
+                    print("error = \(error.localizedDescription)")
+                    #endif*/
+                    return completion(.failure(WebServiceError.status(code: statusCode)))
+                }
             }
             do {
                 /*#if DEBUG
@@ -168,6 +207,115 @@ public class WebService : NSObject {
                 completion(.success(response))
             } catch {
                 let result: Result<ResponseType, WebServiceError> = .failure(WebServiceError(error))
+                return completion(result)
+            }
+        }
+        task.resume()
+    }
+    
+    // likely to big to hold in memory, rewrite using URLSessionUploadTask / backgrouns sessions
+    internal func postAPIRequestMultipartForm(_ requestPath:String, configParms: OpenAIAPIAudioParms, filename: String, completion: @escaping (Result<OpenAIAPIAudioResponse, WebServiceError>) -> Void) {
+        var request = createUrlRequest(requestPath, method: "POST", jsonRequest: false)
+        guard request != nil else {
+            return completion(.failure(WebServiceError.badUrl))
+        }
+
+        //request!.httpBody = try JSONEncoder().encode(configParms)
+        let boundary = UUID().uuidString
+        request!.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        var formData = Data()
+        
+        let mirror = Mirror(reflecting: configParms)
+        for child in mirror.children {
+            if let propertyName = child.label {
+                if (type(of: child.value) == Optional<Data>.self || type(of: child.value) == Data.self), let value = child.value as? Data {
+                    formData.append("--\(boundary)\r\n".data(using: .utf8)!)
+                    formData.append("Content-Disposition: form-data; name=\"\(propertyName)\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+                    //formData.append("Content-Type: audio/mp4\r\n\r\n".data(using: .utf8)!)
+                    formData.append("\r\n".data(using: .utf8)!)
+                    formData.append(value)
+                    formData.append("\r\n".data(using: .utf8)!)
+                    continue
+                }
+                if (type(of: child.value) == Optional<String>.self || type(of: child.value) == String.self), let value = child.value as? String {
+                    formData.append("--\(boundary)\r\n".data(using: .utf8)!)
+                    formData.append("Content-Disposition: form-data; name=\"\(propertyName)\"\r\n\r\n".data(using: .utf8)!)
+                    formData.append(value.data(using: .utf8)!)
+                    formData.append("\r\n".data(using: .utf8)!)
+                    continue
+                }
+                if (type(of: child.value) == Optional<Float>.self || type(of: child.value) == Float.self), let value = child.value as? Float {
+                    formData.append("--\(boundary)\r\n".data(using: .utf8)!)
+                    formData.append("Content-Disposition: form-data; name=\"\(propertyName)\"\r\n\r\n".data(using: .utf8)!)
+                    formData.append("\(value)".data(using: .utf8)!)
+                    formData.append("\r\n".data(using: .utf8)!)
+                    continue
+                }
+                if (type(of: child.value) == Optional<Int>.self || type(of: child.value) == Int.self), let value = child.value as? Int {
+                    formData.append("--\(boundary)\r\n".data(using: .utf8)!)
+                    formData.append("Content-Disposition: form-data; name=\"\(propertyName)\"\r\n\r\n".data(using: .utf8)!)
+                    formData.append("\(value)".data(using: .utf8)!)
+                    formData.append("\r\n".data(using: .utf8)!)
+                    continue
+                }
+            }
+        }
+
+        formData.append("--\(boundary)--\r\n".data(using: .utf8)!) // Add the closing boundary
+        
+        //print(String(decoding: formData, as: UTF8.self))
+        request!.httpBody = formData
+                
+        let task = session.dataTask(with: request!) { (data, response, error) in
+            guard error == nil else {
+                // .mapError(...)
+                let result: Result<OpenAIAPIAudioResponse, WebServiceError> = .failure(WebServiceError(error!))
+                return completion(result)
+            }
+            guard data != nil else {
+                return completion(.failure(WebServiceError.noData))
+            }
+            
+            guard response != nil else {
+                return completion(.failure(WebServiceError.noResponse))
+            }
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return completion(.failure(WebServiceError.badResponse))
+            }
+            let statusCode = httpResponse.statusCode
+            guard statusCode == 200 else {
+                //return completion(.failure(WebServiceError.status(code: statusCode)))
+                
+                /*
+                 error example
+                 "error": {
+                 "message": "Incorrect API key provided: secret. You can find your API key at https://platform.openai.com/account/api-keys.",
+                 "type": "invalid_request_error",
+                 "param": null,
+                 "code": "invalid_api_key"
+                 }
+                 */
+                do {
+                    let errorResponse = try JSONDecoder().decode(OpenAIAPIErrorResponse.self, from: data!)
+                    return completion(.failure(WebServiceError.apiError(msg:errorResponse.error.message)))
+                } catch {
+#if DEBUG
+                    print(String(data: data!, encoding: .utf8)!)
+                    print("error = \(error.localizedDescription)")
+#endif
+                    return completion(.failure(WebServiceError.status(code: statusCode)))
+                }
+            }
+            do {
+                /*#if DEBUG
+                 let str = String(decoding: data!, as: UTF8.self)
+                 print("data as string: \(str)")
+                 #endif*/
+                
+                let response = try JSONDecoder().decode(OpenAIAPIAudioResponse.self, from: data!)
+                completion(.success(response))
+            } catch {
+                let result: Result<OpenAIAPIAudioResponse, WebServiceError> = .failure(WebServiceError(error))
                 return completion(result)
             }
         }

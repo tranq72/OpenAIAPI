@@ -6,6 +6,7 @@
 
 import Foundation
 
+// Completions
 public struct OpenAIAPICompletionResponse: Codable {
     public let id: String
     public let object: String
@@ -14,22 +15,11 @@ public struct OpenAIAPICompletionResponse: Codable {
     public let choices: [OpenAIAPICompletionChoice]
     public let usage: OpenAIAPIUsage
 }
-public struct OpenAIAPIEditResponse: Codable {
-    public let object: String
-    public let created: TimeInterval
-    public let choices: [OpenAIAPIEditChoice]
-    public let usage: OpenAIAPIUsage
-}
 public struct OpenAIAPICompletionChoice: Codable {
     public let text: String
     public let index: Int
     //public let logprobs: ..
     public let finish_reason: String
-}
-public struct OpenAIAPIEditChoice: Codable {
-    public let text: String
-    public let index: Int
-    //public let logprobs: ..
 }
 public struct OpenAIAPIUsage: Codable {
     public let prompt_tokens: Int
@@ -40,6 +30,21 @@ public struct OpenAIAPIUsage: Codable {
     }
 }
 
+// Edits
+public struct OpenAIAPIEditChoice: Codable {
+    public let text: String
+    public let index: Int
+    //public let logprobs: ..
+}
+public struct OpenAIAPIEditResponse: Codable {
+    public let object: String
+    public let created: TimeInterval
+    public let choices: [OpenAIAPIEditChoice]
+    public let usage: OpenAIAPIUsage
+}
+
+
+// Models
 public struct OpenAIAPIModelsResponse: Codable {
     public let data: [OpenAIAPIModelResponse]
     public let object: String
@@ -65,4 +70,34 @@ public struct OpenAIAPIPermission: Codable {
     public let organization: String
     public let group: String?
     public let is_blocking: Bool
+}
+
+// Audio
+public struct OpenAIAPIAudioResponse: Codable {
+    public let text: String
+}
+
+// Errors
+// https://platform.openai.com/docs/guides/error-codes/api-errors
+public struct OpenAIAPIErrorResponse: Codable {
+    public let error: OpenAIAPIError
+    
+    public struct OpenAIAPIError: Codable {
+        public let message: String
+        public let type: String
+        public let param: String?
+        public let code: String?
+    }
+}
+
+// response formats
+public enum OpenAIAPIResponseFormat : String {
+    case json
+    case text
+    case srt
+    case verbose_json
+    case vtt
+    public var name: String {
+        return String(describing: self)
+    }
 }

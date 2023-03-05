@@ -41,7 +41,7 @@ let openAI = OpenAIAPI(OpenAIAPIConfig(secret: "..."))
         }
     }
 
-:bulb: OpenAIAPI supports Swift concurrency, ie:
+:bulb: OpenAIAPI supports Swift concurrency, e.g.:
 
     Task {
           do {

@@ -6,6 +6,7 @@
 
 import Foundation
 
+// Completions
 public struct OpenAIAPICompletionParms : Codable {
     var model: String = OpenAIAPIModel.text_davinci_003.name
     var prompt: String = "<|endoftext|>"
@@ -26,6 +27,8 @@ public struct OpenAIAPICompletionParms : Codable {
 
     var user: String?
 }
+
+// Edits
 public struct OpenAIAPIEditParms : Codable {
     var model: String = OpenAIAPIModel.text_davinci_edit_001.name
 
@@ -36,6 +39,19 @@ public struct OpenAIAPIEditParms : Codable {
     var temperature: Float = 1
     var top_p: Float = 1
    
+    var user: String?
+}
+
+// Audio
+public struct OpenAIAPIAudioParms : Codable {
+    var file: Data?
+    var model: String = OpenAIAPIModel.whisper_1.name
+    var prompt: String?
+    var response_format: String = OpenAIAPIResponseFormat.json.name
+    
+    var temperature: Float = 0
+    var language: String? // Iso639_1?.code
+    
     var user: String?
 }
 

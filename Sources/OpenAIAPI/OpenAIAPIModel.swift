@@ -6,23 +6,32 @@
 
 import Foundation
 
+// https://platform.openai.com/docs/models/overview
+
 public enum OpenAIAPIModel {
+    
+    // GPT-3.5
+    //case gpt_3.5_turbo
+    //case gpt_3.5_turbo_0301
     case text_davinci_003
     case text_davinci_002
+    case code_davinci_002teas
+    
+    
     case text_davinci_001
     
     case text_curie_001
     case text_babbage_001
     case text_ada_001
-    
+
+    /// Edits
     case text_davinci_edit_001
+    case code_davinci_edit_001
+
     case text_davinci_insert_002
     case text_davinci_insert_001
     
-    case code_davinci_002
     case code_cushman_001
-    
-    case code_davinci_edit_001
     
     case text_search_babbage_doc_001
     case text_search_curie_doc_001
@@ -75,6 +84,9 @@ public enum OpenAIAPIModel {
     case davinci_instruct_beta
     case curie_instruct_beta
     
+    // Audio
+    case whisper_1
+
     public var name: String {
         return String(describing: self).replacingOccurrences(of: "_", with: "-")
     }
