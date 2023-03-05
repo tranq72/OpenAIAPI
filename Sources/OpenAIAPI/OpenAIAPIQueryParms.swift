@@ -50,7 +50,7 @@ public struct OpenAIAPIAudioParms : Codable {
     var response_format: String = OpenAIAPIResponseFormat.json.name
     
     var temperature: Float = 0
-    var language: String? // Iso639_1?.code
+    var language: String? // Iso639_1?.code - transcriptions only
     
     var user: String?
 }

@@ -65,6 +65,28 @@ let openAI = OpenAIAPI(OpenAIAPIConfig(secret: "..."))
         }
     }
 
+##### [Audio](https://platform.openai.com/docs/api-reference/audio)
+
+    let config = OpenAIAPIAudioParms(prompt: nil, response_format:OpenAIAPIResponseFormat.json.name) //, language: Iso639_1.en.code)
+
+    openAI.createTranscription(filedata:audio, filename: "transcript.mp3", config:queryParms) { (result:Result<OpenAIAPIAudioResponse, WebServiceError>) in
+        switch result {
+           case .success(let success):
+              dump(success)
+           case .failure(let failure):
+              print("\(failure.localizedDescription)")
+        }
+    }
+
+    openAI.createTranslation(filedata:audio, filename: "transcript.mp3", config:queryParms) { (result:Result<OpenAIAPIAudioResponse, WebServiceError>) in
+        switch result {
+           case .success(let success):
+              dump(success)
+           case .failure(let failure):
+              print("\(failure.localizedDescription)")
+        }
+    }
+
 ##### [List models](https://platform.openai.com/docs/api-reference/models/list)
 
     openAI.listModels { (result:Result<OpenAIAPIModelsResponse, WebServiceError>)  in
@@ -94,6 +116,8 @@ Default values for most parameters can be overridden for each query using the co
 For the full list of the supported parameters and their  default values see [OpenAIAPIQueryParms.swift](https://github.com/tranq72/OpenAIAPI/blob/main/Sources/OpenAIAPI/OpenAIAPIQueryParms.swift).
 <BR>
 For the supported models see [OpenAIAPIModel.swift](https://github.com/tranq72/OpenAIAPI/blob/main/Sources/OpenAIAPI/OpenAIAPIModel.swift).
+<BR>
+The `createTranscription` request supports an optional `language` parameter (string in ISO-639-1 code, see [Iso639_1.swift](https://github.com/tranq72/OpenAIAPI/blob/main/Sources/OpenAIAPI/Iso639_1.swift)) that can be used as a hint to improve accuracy and latency.
 
 ### API secret
 
