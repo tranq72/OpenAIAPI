@@ -8,9 +8,10 @@ The full OpenAI platform docs are here: <https://platform.openai.com/docs/>
 
 -   [Completions](#completions)
 -   [Edits](#edits)
+-   [Audio](#audio)
 -   [List models](#list-models)
 -   [Retrieve model](#retrieve-model)
--   ...
+
 
 ## Installation
 
